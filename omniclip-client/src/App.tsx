@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Copy, MonitorSmartphone, LogOut, Ticket, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Copy, MonitorSmartphone, LogOut, Ticket, AlertCircle, CheckCircle2, RefreshCw } from "lucide-react";
 import "./App.css";
 
 const API_DEV_URL = "http://localhost:3000/api";
@@ -19,12 +19,26 @@ function App() {
   
   const [promoCode, setPromoCode] = useState("");
 
+  const [updateInfo, setUpdateInfo] = useState<{ version: string; notes: string } | null>(null);
+  const [updating, setUpdating] = useState(false);
+
   useEffect(() => {
     if (accessToken) {
       setView("dashboard");
       startBackgroundSync(accessToken);
     }
   }, [accessToken]);
+
+  // Listen for update-available event emitted by Rust on startup
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    import('@tauri-apps/api/event').then(({ listen }) => {
+      listen<{ version: string; notes: string }>('update-available', (event) => {
+        setUpdateInfo(event.payload);
+      }).then(fn => { unlisten = fn; });
+    }).catch(() => {});
+    return () => { if (unlisten) unlisten(); };
+  }, []);
 
   const startBackgroundSync = async (token: string) => {
     try {
@@ -128,6 +142,26 @@ function App() {
     }
   }
 
+  const handleUpdate = async () => {
+    setUpdating(true);
+    setError(null);
+    try {
+      const { invoke } = await import('@tauri-apps/api/core');
+      const result = await invoke<{ available: boolean; version?: string; notes?: string }>('check_for_update');
+      if (result.available) {
+        setSuccess(`Updated to v${result.version}! Restart to apply.`);
+        setUpdateInfo(null);
+      } else {
+        setSuccess('You are already on the latest version.');
+        setUpdateInfo(null);
+      }
+    } catch (e: any) {
+      setError(e.toString());
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   if (view === "dashboard") {
     return (
       <main className="dashboard-container">
@@ -136,10 +170,27 @@ function App() {
             <div className="logo-icon"><Copy size={20} /></div>
             <h1>OmniClip</h1>
           </div>
-          <button onClick={logout} className="icon-btn" title="Logout">
-            <LogOut size={18} />
-          </button>
+          <div className="header-actions">
+            <button onClick={handleUpdate} disabled={updating} className="icon-btn update-btn" title="Check for updates">
+              <RefreshCw size={18} className={updating ? 'spinning' : ''} />
+            </button>
+            <button onClick={logout} className="icon-btn" title="Logout">
+              <LogOut size={18} />
+            </button>
+          </div>
         </header>
+
+        {updateInfo && (
+          <div className="update-banner">
+            <div className="update-banner-text">
+              <strong>🎉 Update available: v{updateInfo.version}</strong>
+              {updateInfo.notes && <span>{updateInfo.notes}</span>}
+            </div>
+            <button onClick={handleUpdate} disabled={updating} className="update-install-btn">
+              {updating ? 'Installing...' : 'Install Now'}
+            </button>
+          </div>
+        )}
 
         <section className="status-card active">
           <div className="status-indicator blur-pulse"></div>
