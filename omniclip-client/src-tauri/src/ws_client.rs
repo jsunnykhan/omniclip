@@ -1,7 +1,7 @@
 use futures_util::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 use tauri_plugin_clipboard_manager::ClipboardExt;
 use tokio::sync::{mpsc, Mutex};
 use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
@@ -36,11 +36,12 @@ pub async fn start_ws_client(
 
     // Receiver Task
     let lr_read = last_received.clone();
-    let read_task = tokio::spawn(async move {
+    let device_id_read = device_id.clone();
+    let read_task = tauri::async_runtime::spawn(async move {
         while let Some(Ok(Message::Text(text))) = read.next().await {
             if let Ok(payload) = serde_json::from_str::<ClipboardPayload>(&text) {
                 // Ignore messages from ourselves
-                if payload.device_id == device_id {
+                if payload.device_id == device_id_read {
                     continue;
                 }
 
@@ -54,7 +55,7 @@ pub async fn start_ws_client(
 
     // Sender Task
     let lr_write = last_received.clone();
-    let write_task = tokio::spawn(async move {
+    let write_task = tauri::async_runtime::spawn(async move {
         while let Some(new_clip) = rx.recv().await {
             // Check if this matched what we just received (stop infinite loops)
             if *lr_write.lock().await == new_clip {

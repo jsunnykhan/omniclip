@@ -8,12 +8,13 @@ mod ws_client;
 #[cfg(test)]
 mod tests;
 
-use tauri::Manager;
+
 use tauri_plugin_autostart::MacosLauncher;
 use tokio::sync::mpsc;
 
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, Some(vec!["--silently"])))
         .plugin(tauri_plugin_clipboard_manager::init())
         .setup(|app| {
@@ -28,7 +29,7 @@ fn main() {
             let device_id = "device_123".to_string();
             
             let ws_handle = handle.clone();
-            tokio::spawn(async move {
+            tauri::async_runtime::spawn(async move {
                 ws_client::start_ws_client(ws_handle, token, device_id, rx).await;
             });
 
