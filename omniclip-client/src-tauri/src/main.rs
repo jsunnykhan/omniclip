@@ -11,7 +11,7 @@ mod tests;
 
 use tauri_plugin_autostart::MacosLauncher;
 use tokio::sync::{mpsc, Mutex};
-use tauri::Manager;
+use tauri::{Manager, Emitter};
 
 pub struct AppState {
     pub receiver: Mutex<Option<mpsc::Receiver<String>>>,

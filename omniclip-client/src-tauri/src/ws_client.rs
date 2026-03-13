@@ -32,7 +32,7 @@ pub async fn start_ws_client(
     let qs_os = os.replace(" ", "%20");
     let url = format!("ws://127.0.0.1:3000/ws?token={}&device_id={}&device_name={}&os={}", token, device_id, qs_name, qs_os);
 
-    let (ws_stream, response) = match connect_async(&url).await {
+    let (ws_stream, _response) = match connect_async(&url).await {
         Ok(v) => v,
         Err(e) => {
             eprintln!("Failed to connect to relay: {}", e);
