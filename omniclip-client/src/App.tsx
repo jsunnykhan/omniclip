@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Copy, KeyRound, MonitorSmartphone, LogOut, Ticket, Settings, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Copy, MonitorSmartphone, LogOut, Ticket, AlertCircle, CheckCircle2 } from "lucide-react";
 import "./App.css";
 
 const API_DEV_URL = "http://localhost:3000/api";
@@ -15,7 +15,6 @@ function App() {
   const [loading, setLoading] = useState(false);
 
   const [accessToken, setAccessToken] = useState<string | null>(localStorage.getItem("omniclip_access_token"));
-  const [refreshToken, setRefreshToken] = useState<string | null>(localStorage.getItem("omniclip_refresh_token"));
   const [role, setRole] = useState<string | null>(localStorage.getItem("omniclip_role"));
   
   const [promoCode, setPromoCode] = useState("");
@@ -81,7 +80,7 @@ function App() {
       localStorage.setItem("omniclip_role", data.role);
       
       setAccessToken(data.access_token);
-      setRefreshToken(data.refresh_token);
+      localStorage.setItem("omniclip_refresh_token", data.refresh_token);
       setRole(data.role);
       
       setView("dashboard");
@@ -97,7 +96,6 @@ function App() {
     localStorage.removeItem("omniclip_refresh_token");
     localStorage.removeItem("omniclip_role");
     setAccessToken(null);
-    setRefreshToken(null);
     setRole(null);
     setView("login");
   };
