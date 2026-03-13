@@ -1,0 +1,55 @@
+name: 'Publish Tauri Android App'
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+
+      - name: install NDK
+        run: |
+          yes | sdkmanager "ndk;25.2.9519653"
+
+      - name: install frontend dependencies
+        run: npm install
+        working-directory: omniclip-client
+
+      - name: Android Init
+        run: npm run tauri android init
+        working-directory: omniclip-client
+        continue-on-error: true # Might fail if already initialized
+
+      - name: Build APK
+        run: npm run tauri android build
+        working-directory: omniclip-client
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-unsigned.apk
+          path: omniclip-client/src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk
