@@ -1,0 +1,3 @@
+[env]
+SQLX_OFFLINE = "true"
+DATABASE_URL = "postgres://omniclip_user:omniclip_password@localhost:5432/omniclip"

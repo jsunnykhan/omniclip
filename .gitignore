@@ -1,0 +1,48 @@
+# OS & Editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Project Workspaces
+node_modules/
+dist/
+dist-ssr/
+build/
+coverage/
+
+# Rust / Tauri / Axum
+target/
+Cargo.lock
+# However, usually we keep Cargo.lock for binaries, but OmniClip is a binary and a client,
+# so let's keep it un-ignored by default, unless you specifically want to ignore it. We'll leave it un-ignored.
+
+# Tauri / Frontend
+omniclip-client/src-tauri/target/
+omniclip-client/node_modules/
+omniclip-client/dist/
+
+# Env & Secrets
+.env
+.env.*
+!.env.example
+.sqlx/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Database & Docker
+*.db
+*.sqlite
+data/
+db/
+volume/
+postgres-data/
+
+# Misc
+*.sys
+*.log

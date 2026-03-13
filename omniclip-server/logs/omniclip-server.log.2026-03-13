@@ -1,0 +1,2 @@
+[2m2026-03-13T00:15:14.864936Z[0m [32m INFO[0m [2momniclip_server[0m[2m:[0m Server listening on 0.0.0.0:3000
+[2m2026-03-13T00:15:19.624713Z[0m [31mERROR[0m [2momniclip_server::logs[0m[2m:[0m Client [device_123] Error: Test client error
