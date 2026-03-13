@@ -46,3 +46,4 @@ postgres-data/
 # Misc
 *.sys
 *.log
+.tauri
