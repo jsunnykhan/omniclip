@@ -1,20 +1,26 @@
-FROM rust:alpine AS builder
+FROM rust:1.80-slim-bookworm as builder
+WORKDIR /app
 
-# Install musl components for static compilation
-RUN apk add --no-cache musl-dev gcc
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    pkg-config \
+    libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /usr/src/omniclip-server
 COPY . .
-
-# Build the release binary
 RUN cargo build --release
 
-# Use a lightweight alpine image for runtime
-FROM alpine:latest
-
+# Final minimal runtime image
+FROM debian:bookworm-slim
 WORKDIR /app
-COPY --from=builder /usr/src/omniclip-server/target/release/omniclip-server /app/omniclip-server
 
-EXPOSE 3000
+RUN apt-get update && apt-get install -y \
+    libssl-dev \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
+# Copy the compiled binary from the builder stage
+COPY --from=builder /app/target/release/omniclip-server .
+
+EXPOSE 8080
 CMD ["./omniclip-server"]
