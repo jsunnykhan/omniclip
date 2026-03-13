@@ -20,6 +20,9 @@ use crate::auth::{AppState, Claims};
 #[derive(Deserialize)]
 pub struct WsAuth {
     pub token: String,
+    pub device_id: Option<String>,
+    pub device_name: Option<String>,
+    pub os: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -57,6 +60,38 @@ async fn ws_handler(
 
     let user_id = token_data.sub.clone();
     let plan = token_data.plan_type.clone();
+
+    // Check device limits
+    let req_device_id = auth.device_id.unwrap_or_else(|| Uuid::new_v4().to_string());
+    let req_name = auth.device_name.unwrap_or_else(|| "Unknown".to_string());
+    let req_os = auth.os.unwrap_or_else(|| "Unknown".to_string());
+
+    let user_info = sqlx::query!("SELECT max_allowed_devices FROM users WHERE id = $1", user_id)
+        .fetch_optional(&state.app.db).await
+        .unwrap_or(None);
+
+    let max_devices = user_info.map(|u| u.max_allowed_devices).unwrap_or(2);
+
+    let device_count = sqlx::query!("SELECT COUNT(*) FROM devices WHERE user_id = $1", user_id)
+        .fetch_one(&state.app.db).await
+        .unwrap().count.unwrap_or(0);
+
+    let is_registered = sqlx::query!("SELECT 1 as registered FROM devices WHERE user_id = $1 AND device_id = $2", user_id, req_device_id)
+        .fetch_optional(&state.app.db).await
+        .unwrap().is_some();
+
+    if !is_registered && device_count >= max_devices as i64 {
+        return (
+            axum::http::StatusCode::FORBIDDEN,
+            "Device limit reached. Upgrade your plan or apply a promo code."
+        ).into_response();
+    }
+
+    // Upsert device to bump last_sync
+    let _ = sqlx::query!(
+        "INSERT INTO devices (user_id, device_id, name, os, last_sync) VALUES ($1, $2, $3, $4, NOW()) ON CONFLICT (user_id, device_id) DO UPDATE SET last_sync = NOW()",
+        user_id, req_device_id, req_name, req_os
+    ).execute(&state.app.db).await;
 
     ws.on_upgrade(move |socket| handle_socket(socket, state, user_id, plan))
 }

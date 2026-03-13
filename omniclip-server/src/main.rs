@@ -1,6 +1,7 @@
 mod auth;
 mod relay;
 mod logs;
+mod admin;
 
 use axum::Router;
 use sqlx::postgres::PgPoolOptions;
@@ -8,10 +9,12 @@ use std::env;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tower_http::cors::CorsLayer;
+use tower_http::trace::TraceLayer;
 
 use auth::{auth_routes, AppState};
 use relay::{relay_routes, RelayState};
 use logs::logs_routes;
+use admin::admin_routes;
 use tracing_subscriber::fmt::writer::MakeWriterExt;
 
 
@@ -51,9 +54,11 @@ async fn main() {
     let app = Router::new()
         .nest("/api/auth", auth_routes())
         .nest("/api/logs", logs_routes())
+        .nest("/api/admin", admin_routes())
         .with_state(app_state)
         .merge(relay_routes(relay_state))
-        .layer(CorsLayer::permissive());
+        .layer(CorsLayer::permissive())
+        .layer(TraceLayer::new_for_http());
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
         .await

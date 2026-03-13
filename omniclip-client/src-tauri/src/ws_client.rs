@@ -18,14 +18,27 @@ pub async fn start_ws_client(
     app: AppHandle,
     token: String,
     device_id: String,
+    device_name: String,
+    os: String,
     mut rx: mpsc::Receiver<String>,
 ) {
-    let url = format!("ws://127.0.0.1:3000/ws?token={}", token); // Hardcoded for local dev
+    use tauri::Emitter;
+    
+    // We import urlencoding to properly escape names. 
+    // Wait, let's just make sure we don't have dependency issues. It's better to just manually replace spaces or avoid libraries if not present.
+    // Actually, `url::form_urlencoded` might be available if we have the `url` crate.
+    // Let's just create a basic querystring.
+    let qs_name = device_name.replace(" ", "%20");
+    let qs_os = os.replace(" ", "%20");
+    let url = format!("ws://127.0.0.1:3000/ws?token={}&device_id={}&device_name={}&os={}", token, device_id, qs_name, qs_os);
 
-    let (ws_stream, _) = match connect_async(&url).await {
+    let (ws_stream, response) = match connect_async(&url).await {
         Ok(v) => v,
         Err(e) => {
             eprintln!("Failed to connect to relay: {}", e);
+            if e.to_string().contains("403") {
+                let _ = app.emit("sync-error", "Device limit reached. Disconnected.");
+            }
             return;
         }
     };
