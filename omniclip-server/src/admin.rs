@@ -2,7 +2,7 @@ use axum::{
     extract::{Path, State},
     http::StatusCode,
     response::IntoResponse,
-    routing::{get, post, patch},
+    routing::{delete, get, post, patch},
     Json, Router,
 };
 use serde::{Deserialize, Serialize};
@@ -26,6 +26,7 @@ pub struct AdminUser {
 pub struct AdminDevice {
     pub id: Uuid,
     pub user_id: Uuid,
+    pub user_email: String,
     pub device_id: String,
     pub name: String,
     pub os: String,
@@ -49,12 +50,20 @@ pub struct CreatePromoPayload {
     pub expiry_date: Option<DateTime<Utc>>,
 }
 
+#[derive(Deserialize)]
+pub struct UpdatePromoPayload {
+    pub usage_limit: Option<i32>,
+    pub expiry_date: Option<DateTime<Utc>>,
+}
+
 pub fn admin_routes() -> Router<Arc<AppState>> {
     Router::new()
         .route("/users", get(get_users))
+        .route("/users/:id/devices", get(get_user_devices))
+        .route("/users/:id/upgrade", patch(upgrade_user))
         .route("/devices", get(get_devices))
         .route("/promo-codes", post(create_promo).get(get_promos))
-        .route("/users/:id/upgrade", patch(upgrade_user))
+        .route("/promo-codes/:code", patch(update_promo).delete(delete_promo))
 }
 
 fn enforce_admin(claims: &Claims) -> Result<(), (StatusCode, String)> {
@@ -88,6 +97,28 @@ async fn get_users(
     Ok(Json(users))
 }
 
+async fn get_user_devices(
+    State(state): State<Arc<AppState>>,
+    claims: Claims,
+    Path(user_id): Path<Uuid>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    enforce_admin(&claims)?;
+
+    let devices = sqlx::query_as!(
+        AdminDevice,
+        "SELECT d.id, d.user_id, u.email as user_email, d.device_id, d.name, d.os, d.last_sync
+         FROM devices d JOIN users u ON d.user_id = u.id
+         WHERE d.user_id = $1
+         ORDER BY d.last_sync DESC",
+        user_id
+    )
+    .fetch_all(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(Json(devices))
+}
+
 async fn get_devices(
     State(state): State<Arc<AppState>>,
     claims: Claims,
@@ -96,7 +127,9 @@ async fn get_devices(
 
     let devices = sqlx::query_as!(
         AdminDevice,
-        "SELECT id, user_id, device_id, name, os, last_sync FROM devices ORDER BY last_sync DESC"
+        "SELECT d.id, d.user_id, u.email as user_email, d.device_id, d.name, d.os, d.last_sync
+         FROM devices d JOIN users u ON d.user_id = u.id
+         ORDER BY d.last_sync DESC"
     )
     .fetch_all(&state.db)
     .await
@@ -142,6 +175,55 @@ async fn get_promos(
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     Ok(Json(promos))
+}
+
+async fn update_promo(
+    State(state): State<Arc<AppState>>,
+    claims: Claims,
+    Path(code): Path<String>,
+    Json(payload): Json<UpdatePromoPayload>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    enforce_admin(&claims)?;
+
+    let promo = sqlx::query_as!(
+        AdminPromo,
+        "UPDATE promo_codes
+         SET usage_limit = COALESCE($1, usage_limit),
+             expiry_date = $2
+         WHERE code = $3
+         RETURNING code, device_boost_count, usage_limit, times_used, expiry_date",
+        payload.usage_limit,
+        payload.expiry_date,
+        code
+    )
+    .fetch_optional(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .ok_or((StatusCode::NOT_FOUND, "Promo code not found".to_string()))?;
+
+    Ok(Json(promo))
+}
+
+async fn delete_promo(
+    State(state): State<Arc<AppState>>,
+    claims: Claims,
+    Path(code): Path<String>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    enforce_admin(&claims)?;
+
+    let result = sqlx::query!(
+        "DELETE FROM promo_codes WHERE code = $1",
+        code
+    )
+    .execute(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    if result.rows_affected() == 0 {
+        return Err((StatusCode::NOT_FOUND, "Promo code not found".to_string()));
+    }
+
+    Ok(Json(serde_json::json!({"message": "Promo code deleted"})))
 }
 
 async fn upgrade_user(
