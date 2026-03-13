@@ -218,7 +218,7 @@ async fn apply_promo(
     let mut tx = state.db.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     let _ = sqlx::query!(
-        "UPDATE users SET max_allowed_devices = max_allowed_devices + $1 WHERE id = $2",
+        "UPDATE users SET max_allowed_devices = GREATEST(max_allowed_devices, $1) WHERE id = $2",
         promo.device_boost_count,
         claims.sub
     )
