@@ -6,7 +6,7 @@ services:
       context: ./omniclip-server
       dockerfile: Dockerfile
     ports:
-      - "5080:8080"
+      - "6030:8080"
     environment:
       - DATABASE_URL=${DATABASE_URL:-postgres://postgres:password@db:5432/omniclip}
     restart: unless-stopped
@@ -18,11 +18,13 @@ services:
       context: ./omniclip-web
       dockerfile: Dockerfile
     ports:
-      - "5000:3000"
+      - "6010:3000"
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=http://omniapi.sunnykhan.pro
+      # Next.js environment variables here (must start with NEXT_PUBLIC_ for client)
+      - NEXT_PUBLIC_API_URL=http://localhost:6030
     restart: unless-stopped
+
 
   db:
     image: postgres:15-alpine

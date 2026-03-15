@@ -47,52 +47,73 @@ const roadmap = [
 ];
 
 const statusConfig = {
-  shipped: { label: "Shipped", color: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20", dot: "bg-emerald-400", Icon: CheckCircle2 },
-  "in-progress": { label: "In Progress", color: "bg-violet-500/10 text-violet-400 border-violet-500/20", dot: "bg-violet-400", Icon: Clock },
-  planned: { label: "Planned", color: "bg-white/5 text-white/40 border-white/10", dot: "bg-white/20", Icon: Circle },
+  shipped: {
+    label: "Shipped",
+    badgeClass: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/25",
+    dot: "bg-emerald-500",
+    textClass: "text-foreground",
+    Icon: CheckCircle2,
+    cardClass: "border-emerald-500/20 bg-card",
+  },
+  "in-progress": {
+    label: "In Progress",
+    badgeClass: "bg-primary/10 text-primary border-primary/25",
+    dot: "bg-primary",
+    textClass: "text-foreground/80",
+    Icon: Clock,
+    cardClass: "border-primary/20 bg-card",
+  },
+  planned: {
+    label: "Planned",
+    badgeClass: "bg-muted text-muted-foreground border-border",
+    dot: "bg-muted-foreground/40",
+    textClass: "text-muted-foreground",
+    Icon: Circle,
+    cardClass: "border-border bg-card/50",
+  },
 };
 
 export function RoadmapSection() {
   return (
     <section id="roadmap" className="py-32 px-6 relative">
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/2 left-0 w-[500px] h-[500px] rounded-full bg-purple-900/10 blur-[120px]" />
+        <div className="absolute top-1/2 left-0 w-[400px] h-[400px] rounded-full bg-primary/6 blur-[120px]" />
       </div>
       <div className="max-w-7xl mx-auto relative">
         <div className="text-center mb-16">
-          <Badge className="mb-4 bg-white/5 text-white/50 border border-white/10 rounded-full px-4 py-1.5">
+          <Badge className="mb-4 bg-primary/10 text-primary border border-primary/25 rounded-full px-4 py-1.5 font-medium">
             Roadmap
           </Badge>
-          <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">
+          <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-4 text-foreground">
             Where we&apos;re{" "}
-            <span className="bg-gradient-to-r from-violet-400 to-purple-500 bg-clip-text text-transparent">headed.</span>
+            <span className="bg-gradient-to-r from-primary to-violet-400 bg-clip-text text-transparent">headed.</span>
           </h2>
-          <p className="text-white/40 text-lg max-w-xl mx-auto">
+          <p className="text-muted-foreground text-lg max-w-xl mx-auto">
             Transparent progress. Big plans. Built in the open.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
           {roadmap.map((phase) => {
             const cfg = statusConfig[phase.status as keyof typeof statusConfig];
             const Icon = cfg.Icon;
             return (
               <div
                 key={phase.quarter}
-                className="relative bg-white/3 border border-white/8 rounded-2xl p-6 flex flex-col gap-5 hover:border-white/15 transition-all duration-300"
+                className={`relative border rounded-2xl p-6 flex flex-col gap-5 hover:shadow-md transition-all duration-300 ${cfg.cardClass}`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-white/30 text-xs font-mono uppercase tracking-widest">{phase.quarter}</span>
-                  <Badge className={`text-xs rounded-full border ${cfg.color} flex items-center gap-1`}>
+                  <span className="text-muted-foreground text-xs font-mono font-semibold uppercase tracking-widest">{phase.quarter}</span>
+                  <Badge className={`text-xs rounded-full border font-medium flex items-center gap-1 ${cfg.badgeClass}`}>
                     <Icon size={10} />
                     {cfg.label}
                   </Badge>
                 </div>
-                <ul className="space-y-3">
+                <ul className="space-y-2.5">
                   {phase.items.map((item) => (
                     <li key={item} className="flex items-start gap-2.5 text-sm">
                       <span className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${cfg.dot}`} />
-                      <span className={phase.status === "shipped" ? "text-white/70" : "text-white/35"}>{item}</span>
+                      <span className={cfg.textClass}>{item}</span>
                     </li>
                   ))}
                 </ul>

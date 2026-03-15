@@ -15,6 +15,10 @@ pipeline {
         }
 
         stage('Build & Deploy with Docker Combine') {
+            when {
+                branch 'main'
+                changeset "omniclip-server/**"
+            }
             steps {
                 // We use Windows batch (bat) command here or 'sh' for linux.
                 // Assuming your Jenkins runtime is running bash/sh

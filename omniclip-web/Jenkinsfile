@@ -1,0 +1,70 @@
+pipeline {
+    agent any
+
+    environment {
+        // These should be configured in Jenkins Credentials/Environment
+        NEXT_PUBLIC_API_URL = credentials('OMNICLIP_API_URL')
+        GITHUB_PAT          = credentials('OMNICLIP_GITHUB_PAT')
+        AUTH_SECRET         = credentials('OMNICLIP_AUTH_SECRET')
+        
+        NODE_ENV            = 'production'
+        NEXT_TELEMETRY_DISABLED = '1'
+    }
+
+    stages {
+        stage('Install Dependencies') {
+            steps {
+                dir('omniclip-web') {
+                    sh 'npm install -g pnpm'
+                    sh 'pnpm install'
+                }
+            }
+        }
+
+        stage('Lint & Type Check') {
+            steps {
+                dir('omniclip-web') {
+                    sh 'pnpm lint'
+                    // Uncomment if you want to enforce strict type checks in CI
+                    // sh 'pnpm exec tsc --noEmit'
+                }
+            }
+        }
+
+        stage('Build') {
+            steps {
+                dir('omniclip-web') {
+                    // Inject environment variables into the build process
+                    sh '''
+                    export NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+                    export GITHUB_PAT=${GITHUB_PAT}
+                    export AUTH_SECRET=${AUTH_SECRET}
+                    pnpm build
+                    '''
+                }
+            }
+        }
+
+        stage('Docker Build & Push') {
+            // Optional: Build and push image if using a registry
+            when {
+                branch 'main'
+            }
+            steps {
+                dir('omniclip-web') {
+                    sh 'docker build -t omniclip-web:latest .'
+                    // sh 'docker push your-registry/omniclip-web:latest'
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Web project build successful!'
+        }
+        failure {
+            echo 'Web project build failed.'
+        }
+    }
+}

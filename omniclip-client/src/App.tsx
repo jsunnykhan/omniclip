@@ -2,21 +2,21 @@ import { useState, useEffect } from "react";
 import { Copy, MonitorSmartphone, LogOut, Ticket, AlertCircle, CheckCircle2, RefreshCw } from "lucide-react";
 import "./App.css";
 
-const API_DEV_URL = "http://localhost:3000/api";
+const API_URL = "https://omniapi.sunnykhan.pro/api";
 
 function App() {
   const [view, setView] = useState<"login" | "register" | "dashboard">("login");
-  
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  
+
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const [accessToken, setAccessToken] = useState<string | null>(localStorage.getItem("omniclip_access_token"));
   const [role, setRole] = useState<string | null>(localStorage.getItem("omniclip_role"));
-  
+
   const [promoCode, setPromoCode] = useState("");
 
   const [updateInfo, setUpdateInfo] = useState<{ version: string; notes: string } | null>(null);
@@ -36,7 +36,7 @@ function App() {
       listen<{ version: string; notes: string }>('update-available', (event) => {
         setUpdateInfo(event.payload);
       }).then(fn => { unlisten = fn; });
-    }).catch(() => {});
+    }).catch(() => { });
     return () => { if (unlisten) unlisten(); };
   }, []);
 
@@ -44,26 +44,26 @@ function App() {
     try {
       const { invoke } = await import('@tauri-apps/api/core');
       const { listen } = await import('@tauri-apps/api/event');
-      
+
       let devId = localStorage.getItem("omniclip_device_id");
       if (!devId) {
-         devId = crypto.randomUUID();
-         localStorage.setItem("omniclip_device_id", devId);
+        devId = crypto.randomUUID();
+        localStorage.setItem("omniclip_device_id", devId);
       }
-      
+
       const deviceName = "Omni Desktop " + devId.substring(0, 4);
       const os = navigator.userAgent.includes("Win") ? "Windows" : navigator.userAgent.includes("Mac") ? "MacOS" : "Linux";
-      
+
       await invoke('start_sync', {
-         token,
-         deviceId: devId,
-         deviceName,
-         os
+        token,
+        deviceId: devId,
+        deviceName,
+        os
       });
 
       listen("sync-error", (event) => {
-         setError(event.payload as string);
-         logout();
+        setError(event.payload as string);
+        logout();
       });
     } catch (e) {
       console.log("Tauri environment not found or failed to start sync", e);
@@ -77,7 +77,7 @@ function App() {
 
     try {
       const endpoint = isLogin ? "/auth/login" : "/auth/register";
-      const res = await fetch(`${API_DEV_URL}${endpoint}`, {
+      const res = await fetch(`${API_URL}${endpoint}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -92,11 +92,11 @@ function App() {
       localStorage.setItem("omniclip_access_token", data.access_token);
       localStorage.setItem("omniclip_refresh_token", data.refresh_token);
       localStorage.setItem("omniclip_role", data.role);
-      
+
       setAccessToken(data.access_token);
       localStorage.setItem("omniclip_refresh_token", data.refresh_token);
       setRole(data.role);
-      
+
       setView("dashboard");
     } catch (err: any) {
       setError(err.message || "An unexpected error occurred");
@@ -121,9 +121,9 @@ function App() {
     setSuccess(null);
 
     try {
-      const res = await fetch(`${API_DEV_URL}/auth/promo`, {
+      const res = await fetch(`${API_URL}/auth/promo`, {
         method: "POST",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${accessToken}`
         },
@@ -206,19 +206,19 @@ function App() {
         ) : null}
 
         <section className="card promo-section">
-          <h3><Ticket size={18}/> Redeem Promo Code</h3>
+          <h3><Ticket size={18} /> Redeem Promo Code</h3>
           <p>Increase your maximum synced devices limit.</p>
           <div className="input-group">
-            <input 
-              type="text" 
-              placeholder="e.g. OMNI-2026" 
+            <input
+              type="text"
+              placeholder="e.g. OMNI-2026"
               value={promoCode}
               onChange={(e) => setPromoCode(e.target.value)}
             />
             <button onClick={submitPromo} disabled={loading || !promoCode}>Apply</button>
           </div>
-          {error && <div className="alert-msg error"><AlertCircle size={14}/> {error}</div>}
-          {success && <div className="alert-msg success"><CheckCircle2 size={14}/> {success}</div>}
+          {error && <div className="alert-msg error"><AlertCircle size={14} /> {error}</div>}
+          {success && <div className="alert-msg success"><CheckCircle2 size={14} /> {success}</div>}
         </section>
 
       </main>
@@ -237,27 +237,27 @@ function App() {
         <div className="auth-form">
           <div className="form-group">
             <label>Email Address</label>
-            <input 
-              type="email" 
-              placeholder="you@example.com" 
+            <input
+              type="email"
+              placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
           </div>
           <div className="form-group">
             <label>Password</label>
-            <input 
-              type="password" 
-              placeholder="••••••••" 
+            <input
+              type="password"
+              placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
           </div>
 
-          {error && <div className="alert-msg error"><AlertCircle size={14}/> {error}</div>}
+          {error && <div className="alert-msg error"><AlertCircle size={14} /> {error}</div>}
 
-          <button 
-            className="primary-btn" 
+          <button
+            className="primary-btn"
             onClick={() => handleAuth(view === "login")}
             disabled={loading}
           >
